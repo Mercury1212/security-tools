@@ -629,6 +629,47 @@
                 max-width: 100%;
             }
         }
+
+        /* TOTP copy button styling */
+        .totp-display-container {
+            display: flex;
+            margin: 24px 0;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            height: 80px;
+            border: 1px solid var(--border);
+        }
+        
+        .totp-display {
+            flex: 1;
+            padding: 18px;
+            font-size: 2rem;
+            border: none;
+            background: var(--light);
+            color: var(--primary-dark);
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-weight: 800;
+            text-align: center;
+            letter-spacing: 6px;
+        }
+        
+        .btn-copy-totp {
+            width: 80px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            font-size: 1.5rem;
+        }
+        
+        .btn-copy-totp:hover {
+            background: var(--primary-dark);
+        }
     </style>
 </head>
 <body>
@@ -702,7 +743,7 @@
                                 </label>
                                 <label class="option">
                                     <input type="checkbox" id="symbols" checked>
-                                    Symbols (!@#$)
+                                    Symbols & Extended ASCII
                                 </label>
                             </div>
                         </div>
@@ -749,7 +790,14 @@
 
                         <div class="result-container" id="result" style="display:none;">
                             <p>Your TOTP code is:</p>
-                            <div class="totp-code" id="totpCode">------</div>
+                            
+                            <div class="totp-display-container">
+                                <div class="totp-display" id="totpCode">------</div>
+                                <button class="btn-copy-totp" id="copyTOTP">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                            
                             <div class="timer" id="timer">Code valid for: <span id="countdown">30</span> seconds</div>
                         </div>
                     </div>
@@ -792,7 +840,8 @@
             const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
             const lowercase = 'abcdefghijklmnopqrstuvwxyz';
             const numbers = '0123456789';
-            const symbols = '!@#$%^&*()_-+={}[]|:;"<>,.?/~`';
+            // Extended ASCII characters (excluding control characters and space)
+            const symbols = '!@#$%^&*()_-+={}[]|:;"<>,.?/~`¡¢£¤¥¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ';
             
             // DOM elements
             const lengthSlider = document.getElementById('length-slider');
@@ -867,18 +916,26 @@
                 if (uppercaseCheckbox.checked) charset += uppercase;
                 if (lowercaseCheckbox.checked) charset += lowercase;
                 if (numbersCheckbox.checked) charset += numbers;
+                if (symbolsCheckbox.checked) charset += symbols;
                 
-                // Handle symbols with exclusions
-                if (symbolsCheckbox.checked) {
-                    let allowedSymbols = symbols;
-                    const excludedChars = excludeInput.value;
-                    
-                    // Remove each excluded character from the symbols
-                    for (let char of excludedChars) {
-                        allowedSymbols = allowedSymbols.replace(new RegExp('\\' + char, 'g'), '');
+                // Apply exclusions to all character sets
+                const excludedChars = excludeInput.value;
+                if (excludedChars) {
+                    let filteredCharset = '';
+                    for (let char of charset) {
+                        if (!excludedChars.includes(char)) {
+                            filteredCharset += char;
+                        }
                     }
-                    
-                    charset += allowedSymbols;
+                    charset = filteredCharset;
+                }
+                
+                // Check if we have any characters left to generate password
+                if (charset.length === 0) {
+                    passwordInput.value = 'No characters available';
+                    updatePasswordMetrics('', '');
+                    showToast('No characters available after exclusions');
+                    return;
                 }
                 
                 const length = parseInt(lengthSlider.value);
@@ -910,6 +967,14 @@
             }
             
             function updatePasswordMetrics(password, charset) {
+                if (!password) {
+                    entropyDisplay.textContent = `Entropy: 0 bits`;
+                    timeToCrack.textContent = `Time to crack: Instant`;
+                    strengthBar.style.width = '0%';
+                    strengthLabel.textContent = `Strength: None`;
+                    return;
+                }
+                
                 // Calculate entropy
                 const entropy = Math.log2(charset.length) * password.length;
                 entropyDisplay.textContent = `Entropy: ${Math.round(entropy)} bits`;
@@ -993,67 +1058,137 @@
             const resultDiv = document.getElementById('result');
             const totpCodeElement = document.getElementById('totpCode');
             const countdownElement = document.getElementById('countdown');
+            const copyTOTPBtn = document.getElementById('copyTOTP');
             let countdownInterval;
 
             function base32ToBytes(base32) {
-                const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+                const base32Alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+                base32 = base32.replace(/=+$/, '').toUpperCase();
+                
                 let bits = '';
-                for (let c of base32.toUpperCase()) {
-                    const val = chars.indexOf(c);
+                for (let i = 0; i < base32.length; i++) {
+                    const val = base32Alphabet.indexOf(base32[i]);
                     if (val === -1) continue;
-                    bits += val.toString(2).padStart(5,'0');
+                    bits += val.toString(2).padStart(5, '0');
                 }
+                
                 const bytes = [];
-                for (let i=0;i+8<=bits.length;i+=8){
-                    bytes.push(parseInt(bits.substr(i,8),2));
+                for (let i = 0; i + 8 <= bits.length; i += 8) {
+                    bytes.push(parseInt(bits.substr(i, 8), 2));
                 }
                 return new Uint8Array(bytes);
             }
 
-            async function hmacSha1(key, message) {
-                const cryptoKey = await crypto.subtle.importKey(
-                    'raw', key, { name:'HMAC', hash:'SHA-1' }, false, ['sign']
-                );
-                return new Uint8Array(await crypto.subtle.sign('HMAC', cryptoKey, message));
-            }
-
             async function generateTOTP(secret) {
-                const key = base32ToBytes(secret);
-                const time = Math.floor(Date.now() / 1000 / 30);
-                const timeBuffer = new ArrayBuffer(8);
-                const timeView = new DataView(timeBuffer);
-                timeView.setUint32(4, time); // set lower 4 bytes
-                const hash = await hmacSha1(key, timeBuffer);
-                const offset = hash[hash.length - 1] & 0x0f;
-                const code = ((hash[offset] & 0x7f) << 24 |
-                              (hash[offset + 1] & 0xff) << 16 |
-                              (hash[offset + 2] & 0xff) << 8 |
-                              (hash[offset + 3] & 0xff)) % 1000000;
-                return code.toString().padStart(6,'0');
+                try {
+                    // Convert the secret to bytes
+                    const key = base32ToBytes(secret);
+                    
+                    // Get the current time in 30-second intervals
+                    const time = Math.floor(Date.now() / 1000 / 30);
+                    
+                    // Convert time to a byte array (big-endian)
+                    const timeBuffer = new ArrayBuffer(8);
+                    const timeView = new DataView(timeBuffer);
+                    timeView.setBigUint64(0, BigInt(time), false);
+                    
+                    // Import the key for HMAC
+                    const cryptoKey = await window.crypto.subtle.importKey(
+                        "raw",
+                        key,
+                        { name: "HMAC", hash: "SHA-1" },
+                        false,
+                        ["sign"]
+                    );
+                    
+                    // Calculate HMAC
+                    const hmac = await window.crypto.subtle.sign(
+                        "HMAC",
+                        cryptoKey,
+                        timeBuffer
+                    );
+                    
+                    // Get the last 4 bits of the HMAC to use as an offset
+                    const hmacArray = new Uint8Array(hmac);
+                    const offset = hmacArray[hmacArray.length - 1] & 0x0f;
+                    
+                    // Extract 4 bytes from the HMAC starting at the offset
+                    const codeBytes = hmacArray.slice(offset, offset + 4);
+                    const codeView = new DataView(codeBytes.buffer);
+                    
+                    // Mask the first byte and convert to a number
+                    let code = codeView.getUint32(0) & 0x7fffffff;
+                    
+                    // Generate a 6-digit code
+                    code = code % 1000000;
+                    return code.toString().padStart(6, '0');
+                } catch (e) {
+                    console.error('Error generating TOTP:', e);
+                    return 'ERROR';
+                }
             }
 
-            async function updateCode() {
+            async function updateTOTP() {
                 const secret = secretKeyInput.value.trim();
-                if (!secret) return;
-                totpCodeElement.textContent = await generateTOTP(secret);
-                const timeLeft = 30 - (Math.floor(Date.now()/1000)%30);
-                countdownElement.textContent = timeLeft;
+                if (!secret) {
+                    showToast('Please enter a secret key');
+                    return;
+                }
+                
+                try {
+                    const code = await generateTOTP(secret);
+                    totpCodeElement.textContent = code;
+                    resultDiv.style.display = 'block';
+                    
+                    // Start countdown timer
+                    clearInterval(countdownInterval);
+                    const period = 30;
+                    const elapsedSeconds = Math.floor(Date.now() / 1000) % period;
+                    let remaining = period - elapsedSeconds;
+                    
+                    countdownElement.textContent = remaining;
+                    
+                    countdownInterval = setInterval(async () => {
+                        remaining--;
+                        if (remaining < 0) {
+                            remaining = period;
+                            const newCode = await generateTOTP(secret);
+                            totpCodeElement.textContent = newCode;
+                        }
+                        countdownElement.textContent = remaining;
+                    }, 1000);
+                } catch (e) {
+                    showToast('Invalid secret key format');
+                    console.error('TOTP generation error:', e);
+                }
             }
 
-            generateTOTPBtn.addEventListener('click', () => {
-                if (!secretKeyInput.value.trim()) { 
-                    showToast('Please enter a secret key'); 
-                    return; 
-                }
-                resultDiv.style.display = 'block';
-                updateCode();
-                if (!countdownInterval) {
-                    countdownInterval = setInterval(updateCode, 1000);
-                }
-            });
+            function copyTOTP() {
+                const code = totpCodeElement.textContent;
+                if (code === '------' || code === 'ERROR') return;
+                
+                navigator.clipboard.writeText(code).then(() => {
+                    showToast('TOTP code copied to clipboard');
+                    
+                    // Visual feedback
+                    const icon = copyTOTPBtn.querySelector('i');
+                    icon.className = 'fas fa-check';
+                    setTimeout(() => {
+                        icon.className = 'fas fa-copy';
+                    }, 2000);
+                }).catch(err => {
+                    console.error('Could not copy text: ', err);
+                    showToast('Failed to copy code');
+                });
+            }
 
-            secretKeyInput.addEventListener('keypress', e => { 
-                if(e.key==='Enter') generateTOTPBtn.click(); 
+            // Event listeners for TOTP
+            generateTOTPBtn.addEventListener('click', updateTOTP);
+            copyTOTPBtn.addEventListener('click', copyTOTP);
+            
+            // Allow Enter key to generate TOTP
+            secretKeyInput.addEventListener('keypress', e => {
+                if (e.key === 'Enter') updateTOTP();
             });
         });
     </script>
