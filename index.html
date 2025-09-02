@@ -721,8 +721,8 @@
                         <div class="input-group">
                             <label class="input-label" for="length-slider">Password Length</label>
                             <div class="range-container">
-                                <input type="range" id="length-slider" min="4" max="128" value="12">
-                                <input type="number" id="length-value" min="4" max="128" value="12">
+                                <input type="range" id="length-slider" min="4" max="128" value="20">
+                                <input type="number" id="length-value" min="4" max="128" value="20">
                             </div>
                         </div>
                         
@@ -896,13 +896,13 @@
             }
             
             function handleNumberInput() {
-                const value = Math.min(128, Math.max(4, parseInt(lengthValue.value) || 12));
+                const value = Math.min(128, Math.max(4, parseInt(lengthValue.value) || 20));
                 lengthValue.value = value;
                 lengthDisplay.textContent = `Length: ${value}`;
             }
             
             function handleNumberChange() {
-                const value = Math.min(128, Math.max(4, parseInt(lengthValue.value) || 12));
+                const value = Math.min(128, Math.max(4, parseInt(lengthValue.value) || 20));
                 lengthSlider.value = value;
                 lengthValue.value = value;
                 lengthDisplay.textContent = `Length: ${value}`;
