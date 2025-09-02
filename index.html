@@ -704,7 +704,7 @@
                         
                         <div class="password-meta">
                             <span id="length-display">Length: 20</span>
-                            <span id="entropy-display">Entropy: 72 bits</span>
+                            <span id="entropy-display">Entropy: 150 bits</span>
                         </div>
                         
                         <button class="btn" id="generate">
@@ -743,14 +743,18 @@
                                 </label>
                                 <label class="option">
                                     <input type="checkbox" id="symbols" checked>
-                                    Symbols & Extended ASCII
+                                    Symbols (!@#$%)
+                                </label>
+                                <label class="option">
+                                    <input type="checkbox" id="extendedAscii">
+                                    Extended ASCII
                                 </label>
                             </div>
                         </div>
                         
                         <div class="input-group">
                             <label class="input-label" for="exclude">Exclude Characters (optional)</label>
-                            <input type="text" id="exclude" placeholder="e.g., !@#$%">
+                            <input type="text" id="exclude" placeholder="e.g., ANYCHAR0-9!@#$%">
                             <p class="input-hint">Characters you want to exclude from the generated password</p>
                         </div>
                     </div>
@@ -840,8 +844,9 @@
             const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
             const lowercase = 'abcdefghijklmnopqrstuvwxyz';
             const numbers = '0123456789';
+            const symbols = '!@#$%^&*()_-+={}[]|:;"<>,.?/~`';
             // Extended ASCII characters (excluding control characters and space)
-            const symbols = '!@#$%^&*()_-+={}[]|:;"<>,.?/~`¡¢£¤¥¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ';
+            const extendedAscii = '¡¢£¤¥¦§¨©ª«¬®¯°±²³´µ¶·¸¹º»¼½¾¿ÀÁÂãÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ×ØÙÚÛÜÝÞßàáâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ';
             
             // DOM elements
             const lengthSlider = document.getElementById('length-slider');
@@ -851,6 +856,7 @@
             const lowercaseCheckbox = document.getElementById('lowercase');
             const numbersCheckbox = document.getElementById('numbers');
             const symbolsCheckbox = document.getElementById('symbols');
+            const extendedAsciiCheckbox = document.getElementById('extendedAscii');
             const excludeInput = document.getElementById('exclude');
             const passwordInput = document.getElementById('password');
             const generateBtn = document.getElementById('generate');
@@ -868,9 +874,9 @@
             lengthValue.addEventListener('change', handleNumberChange);
             
             // Character option checkboxes
-            [uppercaseCheckbox, lowercaseCheckbox, numbersCheckbox, symbolsCheckbox].forEach(checkbox => {
+            [uppercaseCheckbox, lowercaseCheckbox, numbersCheckbox, symbolsCheckbox, extendedAsciiCheckbox].forEach(checkbox => {
                 checkbox.addEventListener('change', function() {
-                    const anyChecked = [uppercaseCheckbox, lowercaseCheckbox, numbersCheckbox, symbolsCheckbox]
+                    const anyChecked = [uppercaseCheckbox, lowercaseCheckbox, numbersCheckbox, symbolsCheckbox, extendedAsciiCheckbox]
                         .some(cb => cb.checked);
                     
                     if (!anyChecked) {
@@ -917,6 +923,7 @@
                 if (lowercaseCheckbox.checked) charset += lowercase;
                 if (numbersCheckbox.checked) charset += numbers;
                 if (symbolsCheckbox.checked) charset += symbols;
+                if (extendedAsciiCheckbox.checked) charset += extendedAscii;
                 
                 // Apply exclusions to all character sets
                 const excludedChars = excludeInput.value;
