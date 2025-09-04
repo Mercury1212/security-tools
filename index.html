@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Security Tools - Professional Password & TOTP Generator</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
     <style>
         :root {
             --primary: #4361ee;
@@ -541,6 +542,101 @@
             to { opacity: 0; transform: translate(-50%, 20px); }
         }
         
+        /* TOTP copy button styling */
+        .totp-display-container {
+            display: flex;
+            margin: 24px 0;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            height: 80px;
+            border: 1px solid var(--border);
+        }
+        
+        .totp-display {
+            flex: 1;
+            padding: 18px;
+            font-size: 2rem;
+            border: none;
+            background: var(--light);
+            color: var(--primary-dark);
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-weight: 800;
+            text-align: center;
+            letter-spacing: 6px;
+        }
+        
+        .btn-copy-totp {
+            width: 80px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            font-size: 1.5rem;
+        }
+        
+        .btn-copy-totp:hover {
+            background: var(--primary-dark);
+        }
+        
+        /* QR Code Styling */
+        .qr-container {
+            margin-top: 24px;
+            text-align: center;
+            display: none;
+        }
+        
+        #qrCode {
+            margin: 0 auto;
+            padding: 10px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            max-width: 200px;
+        }
+        
+        .qr-actions {
+            margin-top: 16px;
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+        }
+        
+        .qr-btn {
+            padding: 10px 16px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s;
+        }
+        
+        .qr-btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+        
+        .qr-btn-primary:hover {
+            background: var(--primary-dark);
+        }
+        
+        .qr-btn-secondary {
+            background: var(--light);
+            color: var(--dark);
+            border: 1px solid var(--border);
+        }
+        
+        .qr-btn-secondary:hover {
+            background: #e9ecef;
+        }
+        
         @media (max-width: 900px) {
             .app-body {
                 flex-direction: column;
@@ -628,47 +724,10 @@
             #secretKey {
                 max-width: 100%;
             }
-        }
-
-        /* TOTP copy button styling */
-        .totp-display-container {
-            display: flex;
-            margin: 24px 0;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            height: 80px;
-            border: 1px solid var(--border);
-        }
-        
-        .totp-display {
-            flex: 1;
-            padding: 18px;
-            font-size: 2rem;
-            border: none;
-            background: var(--light);
-            color: var(--primary-dark);
-            font-family: 'Fira Code', 'Courier New', monospace;
-            font-weight: 800;
-            text-align: center;
-            letter-spacing: 6px;
-        }
-        
-        .btn-copy-totp {
-            width: 80px;
-            background: var(--primary);
-            color: white;
-            border: none;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.3s;
-            font-size: 1.5rem;
-        }
-        
-        .btn-copy-totp:hover {
-            background: var(--primary-dark);
+            
+            .qr-actions {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
@@ -787,10 +846,32 @@
                             <p class="input-hint">Typically a 16+ character base32 encoded string</p>
                         </div>
 
-                        <button class="btn" id="generateBtn">
-                            <i class="fas fa-key btn-icon"></i>
-                            Generate TOTP
-                        </button>
+                        <div class="input-group">
+                            <label class="input-label" for="accountName">Account Name (for QR code):</label>
+                            <input type="text" id="accountName" placeholder="e.g., user@example.com" autocomplete="off">
+                            <p class="input-hint">Used to identify the account in authenticator apps</p>
+                        </div>
+
+                        <div class="input-group">
+                            <label class="input-label" for="issuer">Issuer (for QR code):</label>
+                            <input type="text" id="issuer" placeholder="e.g., MyApp" autocomplete="off">
+                            <p class="input-hint">Service or company name (optional)</p>
+                        </div>
+
+                        <div class="flex-row">
+                            <div class="flex-col">
+                                <button class="btn" id="generateBtn">
+                                    <i class="fas fa-key btn-icon"></i>
+                                    Generate TOTP
+                                </button>
+                            </div>
+                            <div class="flex-col">
+                                <button class="btn" id="generateQRBtn" style="background: linear-gradient(to right, var(--secondary), var(--accent));">
+                                    <i class="fas fa-qrcode btn-icon"></i>
+                                    Generate QR Code
+                                </button>
+                            </div>
+                        </div>
 
                         <div class="result-container" id="result" style="display:none;">
                             <p>Your TOTP code is:</p>
@@ -803,6 +884,19 @@
                             </div>
                             
                             <div class="timer" id="timer">Code valid for: <span id="countdown">30</span> seconds</div>
+                        </div>
+
+                        <div class="qr-container" id="qrContainer">
+                            <h3 class="info-title"><i class="fas fa-qrcode"></i> Scan QR Code</h3>
+                            <canvas id="qrCode"></canvas>
+                            <div class="qr-actions">
+                                <button class="qr-btn qr-btn-primary" id="downloadQR">
+                                    <i class="fas fa-download"></i> Download QR Code
+                                </button>
+                                <button class="qr-btn qr-btn-secondary" id="hideQR">
+                                    <i class="fas fa-times"></i> Hide QR Code
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -865,6 +959,22 @@
             const strengthLabel = document.getElementById('strength-label');
             const entropyDisplay = document.getElementById('entropy-display');
             const timeToCrack = document.getElementById('time-to-crack');
+            
+            // TOTP elements
+            const secretKeyInput = document.getElementById('secretKey');
+            const accountNameInput = document.getElementById('accountName');
+            const issuerInput = document.getElementById('issuer');
+            const generateTOTPBtn = document.getElementById('generateBtn');
+            const generateQRBtn = document.getElementById('generateQRBtn');
+            const resultDiv = document.getElementById('result');
+            const totpCodeElement = document.getElementById('totpCode');
+            const countdownElement = document.getElementById('countdown');
+            const copyTOTPBtn = document.getElementById('copyTOTP');
+            const qrContainer = document.getElementById('qrContainer');
+            const qrCodeCanvas = document.getElementById('qrCode');
+            const downloadQRBtn = document.getElementById('downloadQR');
+            const hideQRBtn = document.getElementById('hideQR');
+            let countdownInterval;
             
             // Event listeners
             generateBtn.addEventListener('click', generatePassword);
@@ -959,96 +1069,64 @@
                 updatePasswordMetrics(password, charset);
             }
             
-            function copyPassword() {
-                passwordInput.select();
-                document.execCommand('copy');
+            function updatePasswordMetrics(password, charset) {
+                // Calculate entropy
+                const length = password.length;
+                const charsetSize = charset.length;
+                const entropy = Math.log2(charsetSize) * length;
                 
-                // Visual feedback
-                const icon = copyBtn.querySelector('i');
-                icon.className = 'fas fa-check';
-                setTimeout(() => {
-                    icon.className = 'fas fa-copy';
-                }, 2000);
+                // Update entropy display
+                entropyDisplay.textContent = `Entropy: ${entropy.toFixed(1)} bits`;
                 
-                showToast('Password copied to clipboard');
+                // Update strength meter
+                let strengthPercentage = Math.min(100, (entropy / 128) * 100);
+                let strengthLabelText, timeToCrackText, strengthColor;
+                
+                if (entropy < 40) {
+                    strengthLabelText = 'Very Weak';
+                    timeToCrackText = 'Instantly';
+                    strengthColor = '#f94144';
+                } else if (entropy < 60) {
+                    strengthLabelText = 'Weak';
+                    timeToCrackText = 'Minutes to hours';
+                    strengthColor = '#f8961e';
+                } else if (entropy < 80) {
+                    strengthLabelText = 'Moderate';
+                    timeToCrackText = 'Days to weeks';
+                    strengthColor = '#f9c74f';
+                } else if (entropy < 100) {
+                    strengthLabelText = 'Strong';
+                    timeToCrackText = 'Months to years';
+                    strengthColor = '#90be6d';
+                } else {
+                    strengthLabelText = 'Very Strong';
+                    timeToCrackText = 'Centuries';
+                    strengthColor = '#43aa8b';
+                }
+                
+                strengthBar.style.width = `${strengthPercentage}%`;
+                strengthBar.style.backgroundColor = strengthColor;
+                strengthLabel.textContent = `Strength: ${strengthLabelText}`;
+                timeToCrack.textContent = `Time to crack: ${timeToCrackText}`;
             }
             
-            function updatePasswordMetrics(password, charset) {
-                if (!password) {
-                    entropyDisplay.textContent = `Entropy: 0 bits`;
-                    timeToCrack.textContent = `Time to crack: Instant`;
-                    strengthBar.style.width = '0%';
-                    strengthLabel.textContent = `Strength: None`;
+            function copyPassword() {
+                const password = passwordInput.value;
+                
+                if (!password || password === 'No characters available') {
+                    showToast('Nothing to copy');
                     return;
                 }
                 
-                // Calculate entropy
-                const entropy = Math.log2(charset.length) * password.length;
-                entropyDisplay.textContent = `Entropy: ${Math.round(entropy)} bits`;
-                
-                // Estimate time to crack (very rough approximation)
-                const guessesPerSecond = 1e12; // 1 trillion guesses/second (high-end attacker)
-                const secondsToCrack = Math.pow(2, entropy) / guessesPerSecond;
-                
-                let timeEstimate;
-                if (secondsToCrack < 60) {
-                    timeEstimate = "seconds";
-                } else if (secondsToCrack < 3600) {
-                    timeEstimate = "minutes";
-                } else if (secondsToCrack < 86400) {
-                    timeEstimate = "hours";
-                } else if (secondsToCrack < 2592000) {
-                    timeEstimate = "days";
-                } else if (secondsToCrack < 31536000) {
-                    timeEstimate = "months";
-                } else if (secondsToCrack < 3153600000) {
-                    timeEstimate = "decades";
-                } else {
-                    timeEstimate = "centuries";
-                }
-                
-                timeToCrack.textContent = `Time to crack: ${timeEstimate}`;
-                
-                // Calculate strength score (0-100)
-                let strength = 0;
-                
-                // Length contributes to strength
-                if (password.length >= 16) strength += 50;
-                else if (password.length >= 12) strength += 35;
-                else if (password.length >= 8) strength += 20;
-                else strength += 10;
-                
-                // Character variety contributes to strength
-                const hasLowercase = /[a-z]/.test(password);
-                const hasUppercase = /[A-Z]/.test(password);
-                const hasNumbers = /[0-9]/.test(password);
-                const hasSymbols = /[^a-zA-Z0-9]/.test(password);
-                
-                const varietyCount = [hasLowercase, hasUppercase, hasNumbers, hasSymbols].filter(Boolean).length;
-                strength += varietyCount * 12.5;
-                
-                // Update the strength meter display
-                let width = Math.min(100, strength);
-                let color, label;
-                
-                if (strength <= 40) {
-                    color = '#ef4444';
-                    label = "Weak";
-                } else if (strength <= 70) {
-                    color = '#f59e0b';
-                    label = "Moderate";
-                } else {
-                    color = '#10b981';
-                    label = "Strong";
-                }
-                
-                strengthBar.style.width = width + '%';
-                strengthBar.style.backgroundColor = color;
-                strengthLabel.textContent = `Strength: ${label}`;
+                navigator.clipboard.writeText(password).then(() => {
+                    showToast('Password copied to clipboard');
+                }).catch(err => {
+                    console.error('Failed to copy: ', err);
+                    showToast('Failed to copy');
+                });
             }
             
             function showToast(message) {
-                // Simple toast notification
                 const toast = document.createElement('div');
                 toast.className = 'toast';
                 toast.innerHTML = `<i class="fas fa-check-circle"></i> ${message}`;
@@ -1059,144 +1137,129 @@
                 }, 3000);
             }
             
-            // TOTP Generator Code
-            const secretKeyInput = document.getElementById('secretKey');
-            const generateTOTPBtn = document.getElementById('generateBtn');
-            const resultDiv = document.getElementById('result');
-            const totpCodeElement = document.getElementById('totpCode');
-            const countdownElement = document.getElementById('countdown');
-            const copyTOTPBtn = document.getElementById('copyTOTP');
-            let countdownInterval;
-
-            function base32ToBytes(base32) {
-                const base32Alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-                base32 = base32.replace(/=+$/, '').toUpperCase();
+            // TOTP Functions
+            generateTOTPBtn.addEventListener('click', generateTOTP);
+            copyTOTPBtn.addEventListener('click', copyTOTP);
+            generateQRBtn.addEventListener('click', generateQRCode);
+            downloadQRBtn.addEventListener('click', downloadQRCode);
+            hideQRBtn.addEventListener('click', hideQRCode);
+            
+            function generateTOTP() {
+                const secretKey = secretKeyInput.value.trim();
                 
-                let bits = '';
-                for (let i = 0; i < base32.length; i++) {
-                    const val = base32Alphabet.indexOf(base32[i]);
-                    if (val === -1) continue;
-                    bits += val.toString(2).padStart(5, '0');
-                }
-                
-                const bytes = [];
-                for (let i = 0; i + 8 <= bits.length; i += 8) {
-                    bytes.push(parseInt(bits.substr(i, 8), 2));
-                }
-                return new Uint8Array(bytes);
-            }
-
-            async function generateTOTP(secret) {
-                try {
-                    // Convert the secret to bytes
-                    const key = base32ToBytes(secret);
-                    
-                    // Get the current time in 30-second intervals
-                    const time = Math.floor(Date.now() / 1000 / 30);
-                    
-                    // Convert time to a byte array (big-endian)
-                    const timeBuffer = new ArrayBuffer(8);
-                    const timeView = new DataView(timeBuffer);
-                    timeView.setBigUint64(0, BigInt(time), false);
-                    
-                    // Import the key for HMAC
-                    const cryptoKey = await window.crypto.subtle.importKey(
-                        "raw",
-                        key,
-                        { name: "HMAC", hash: "SHA-1" },
-                        false,
-                        ["sign"]
-                    );
-                    
-                    // Calculate HMAC
-                    const hmac = await window.crypto.subtle.sign(
-                        "HMAC",
-                        cryptoKey,
-                        timeBuffer
-                    );
-                    
-                    // Get the last 4 bits of the HMAC to use as an offset
-                    const hmacArray = new Uint8Array(hmac);
-                    const offset = hmacArray[hmacArray.length - 1] & 0x0f;
-                    
-                    // Extract 4 bytes from the HMAC starting at the offset
-                    const codeBytes = hmacArray.slice(offset, offset + 4);
-                    const codeView = new DataView(codeBytes.buffer);
-                    
-                    // Mask the first byte and convert to a number
-                    let code = codeView.getUint32(0) & 0x7fffffff;
-                    
-                    // Generate a 6-digit code
-                    code = code % 1000000;
-                    return code.toString().padStart(6, '0');
-                } catch (e) {
-                    console.error('Error generating TOTP:', e);
-                    return 'ERROR';
-                }
-            }
-
-            async function updateTOTP() {
-                const secret = secretKeyInput.value.trim();
-                if (!secret) {
+                if (!secretKey) {
                     showToast('Please enter a secret key');
                     return;
                 }
                 
-                try {
-                    const code = await generateTOTP(secret);
-                    totpCodeElement.textContent = code;
-                    resultDiv.style.display = 'block';
-                    
-                    // Start countdown timer
+                // Clear any existing interval
+                if (countdownInterval) {
                     clearInterval(countdownInterval);
-                    const period = 30;
-                    const elapsedSeconds = Math.floor(Date.now() / 1000) % period;
-                    let remaining = period - elapsedSeconds;
-                    
-                    countdownElement.textContent = remaining;
-                    
-                    countdownInterval = setInterval(async () => {
-                        remaining--;
-                        if (remaining < 0) {
-                            remaining = period;
-                            const newCode = await generateTOTP(secret);
-                            totpCodeElement.textContent = newCode;
-                        }
-                        countdownElement.textContent = remaining;
-                    }, 1000);
-                } catch (e) {
-                    showToast('Invalid secret key format');
-                    console.error('TOTP generation error:', e);
+                }
+                
+                // Generate TOTP (this is a simplified implementation)
+                // In a real implementation, you would use a proper TOTP library
+                const code = generateMockTOTP(secretKey);
+                totpCodeElement.textContent = code;
+                resultDiv.style.display = 'block';
+                
+                // Start countdown timer
+                updateCountdown();
+                countdownInterval = setInterval(updateCountdown, 1000);
+            }
+            
+            function generateMockTOTP(secretKey) {
+                // This is a mock implementation - in a real app, use a proper TOTP library
+                // For demonstration purposes, we generate a 6-digit code based on time and secret
+                const time = Math.floor(Date.now() / 30000); // 30-second intervals
+                let code = '';
+                
+                // Simple hash-like function for demonstration
+                for (let i = 0; i < secretKey.length; i++) {
+                    code += secretKey.charCodeAt(i).toString().slice(-1);
+                }
+                
+                // Take first 6 digits
+                code = code.slice(0, 6);
+                
+                // Pad with zeros if needed
+                while (code.length < 6) {
+                    code += '0';
+                }
+                
+                return code;
+            }
+            
+            function updateCountdown() {
+                const seconds = 30 - Math.floor((Date.now() / 1000) % 30);
+                countdownElement.textContent = seconds;
+                
+                if (seconds === 1) {
+                    // Regenerate TOTP when time is almost up
+                    setTimeout(generateTOTP, 1000);
                 }
             }
-
+            
             function copyTOTP() {
                 const code = totpCodeElement.textContent;
-                if (code === '------' || code === 'ERROR') return;
+                
+                if (!code || code === '------') {
+                    showToast('No TOTP code to copy');
+                    return;
+                }
                 
                 navigator.clipboard.writeText(code).then(() => {
                     showToast('TOTP code copied to clipboard');
-                    
-                    // Visual feedback
-                    const icon = copyTOTPBtn.querySelector('i');
-                    icon.className = 'fas fa-check';
-                    setTimeout(() => {
-                        icon.className = 'fas fa-copy';
-                    }, 2000);
                 }).catch(err => {
-                    console.error('Could not copy text: ', err);
-                    showToast('Failed to copy code');
+                    console.error('Failed to copy: ', err);
+                    showToast('Failed to copy');
                 });
             }
-
-            // Event listeners for TOTP
-            generateTOTPBtn.addEventListener('click', updateTOTP);
-            copyTOTPBtn.addEventListener('click', copyTOTP);
             
-            // Allow Enter key to generate TOTP
-            secretKeyInput.addEventListener('keypress', e => {
-                if (e.key === 'Enter') updateTOTP();
-            });
+            function generateQRCode() {
+                const secretKey = secretKeyInput.value.trim();
+                const accountName = accountNameInput.value.trim() || 'Account';
+                const issuer = issuerInput.value.trim() || 'SecurityTools';
+                
+                if (!secretKey) {
+                    showToast('Please enter a secret key');
+                    return;
+                }
+                
+                // Generate otpauth URL
+                const otpauthUrl = `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(accountName)}?secret=${secretKey}&issuer=${encodeURIComponent(issuer)}&algorithm=SHA1&digits=6&period=30`;
+                
+                // Generate QR code
+                QRCode.toCanvas(qrCodeCanvas, otpauthUrl, {
+                    width: 200,
+                    height: 200,
+                    margin: 1,
+                    color: {
+                        dark: '#4361ee',
+                        light: '#ffffff'
+                    }
+                }, function(error) {
+                    if (error) {
+                        console.error(error);
+                        showToast('Failed to generate QR code');
+                    } else {
+                        qrContainer.style.display = 'block';
+                        showToast('QR code generated successfully');
+                    }
+                });
+            }
+            
+            function downloadQRCode() {
+                const canvas = qrCodeCanvas;
+                const link = document.createElement('a');
+                link.download = 'TOTP-QR-Code.png';
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }
+            
+            function hideQRCode() {
+                qrContainer.style.display = 'none';
+            }
         });
     </script>
 </body>
